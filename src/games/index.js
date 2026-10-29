@@ -31,6 +31,8 @@ const LIST = [
     rule: "No sliding. Eddys are magnets that pull each other together. Flip poles to steer." },
   { slug: "slingshot", name: "Slingshot",
     rule: "Pull back and fling Eddys at a pile. Matches merge where they land." },
+  { slug: "eddy-dating", name: "Eddy Dating",
+    rule: "The matchmaker pairs up two Eddys. Swipe right to merge, left to pass. Bad matches end in heartbreak." },
   { slug: "typing", name: "Typing",
     rule: "Every Eddy wears a word. Type it to fire that Eddy at its match before the board fills." },
   { slug: "face-steer", name: "Face Steer",
