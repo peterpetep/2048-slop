@@ -1,6 +1,6 @@
 # Eddy photos
 
-Put one photo per level in this folder, named by level:
+Put one photo per level in this folder (`public/photos/`), named by level:
 
 | File | Tile |
 | --- | --- |

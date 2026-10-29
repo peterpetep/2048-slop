@@ -1,58 +1,12 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Eddy Arcade</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@400;700&display=swap">
-<style>
-/* Layout: a title block, then a grid of game cards; ready games are links, the rest are dimmed */
-:root {
-  --bg: #f6efe4; --panel: #e7d8c3; --ink: #5a4634; --muted: #8f7a63; --accent: #d9822b; --card: #fffaf2;
-  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
-  --body: "Nunito", system-ui, sans-serif;
-}
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #241c15; --panel: #3a2e24; --ink: #f1e4d2; --muted: #b9a58d; --accent: #f0a14c; --card: #2f251c; color-scheme: dark } }
-:root[data-theme="dark"] {
-  --bg: #241c15; --panel: #3a2e24; --ink: #f1e4d2; --muted: #b9a58d; --accent: #f0a14c; --card: #2f251c; color-scheme: dark }
-body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px; }
-.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-h1 { font-family: var(--display); font-weight: 700; font-size: 2.6rem; margin: 0; line-height: 1; }
-h1 span { color: var(--accent); }
-.lede { margin: 6px 0 0; color: var(--muted); }
-.list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.game { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 14px; background: var(--card);
-  border: 1px solid var(--panel); color: inherit; text-decoration: none; min-width: 0; }
-a.game:hover, a.game:focus-visible { border-color: var(--accent); outline: none; }
-.game h2 { font-family: var(--display); font-weight: 500; font-size: 1.2rem; margin: 0; }
-.game p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.4; }
-.game .status { margin-top: auto; padding-top: 6px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
-.game.soon { opacity: .55; }
-.game.soon .status { color: var(--muted); }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div>
-    <h1>Eddy<span>Arcade</span></h1>
-    <p class="lede">Ten ways to merge tiles. Pick a game.</p>
-  </div>
-  <div class="list" id="list"></div>
-</div>
-<script src="games.js"></script>
-<script>
-const list = document.getElementById("list");
-for (const g of window.GAMES) {
-  const el = document.createElement(g.ready ? "a" : "div");
-  el.className = "game" + (g.ready ? "" : " soon");
-  if (g.ready) el.href = `games/${g.slug}/index.html`;
-  el.innerHTML = `<h2></h2><p></p><span class="status">${g.ready ? "Play" : "Coming soon"}</span>`;
-  el.querySelector("h2").textContent = g.name;
-  el.querySelector("p").textContent = g.rule;
-  list.appendChild(el);
-}
-</script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Eddy Arcade</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>
