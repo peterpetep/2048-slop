@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>On Beat</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@400;700&display=swap">
+<style>
+/* Layout: one centered column; header with title + score chips, the beat bar, then the board */
+:root {
+  --bg: #f6efe4;
+  --panel: #e7d8c3;
+  --cell: #efe3d2;
+  --ink: #5a4634;
+  --muted: #8f7a63;
+  --accent: #d9822b;
+  --card: #fffaf2;
+  --good: #4f9a5b;
+  --bad: #c2453a;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #241c15; --panel: #3a2e24; --cell: #4a3b2e; --ink: #f1e4d2; --muted: #b9a58d; --accent: #f0a14c; --card: #2f251c;
+  --good: #7cc487; --bad: #ec7a6f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #241c15; --panel: #3a2e24; --cell: #4a3b2e; --ink: #f1e4d2; --muted: #b9a58d; --accent: #f0a14c; --card: #2f251c;
+  --good: #7cc487; --bad: #ec7a6f; color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px; }
+.wrap { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--display); font-weight: 700; font-size: 2.2rem; margin: 0; line-height: 1; letter-spacing: -0.01em; }
+h1 span { color: var(--accent); }
+.scores { display: flex; gap: 8px; }
+.chip { background: var(--panel); border-radius: 10px; padding: 6px 14px; text-align: center; min-width: 70px; }
+.chip small { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.chip b { font-family: var(--display); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.bar p { margin: 0; color: var(--muted); font-size: .92rem; flex: 1 1 220px; }
+.btns { display: flex; gap: 8px; }
+button { font-family: var(--display); font-weight: 500; font-size: .95rem; border: 0; border-radius: 999px;
+  padding: 8px 16px; background: var(--accent); color: #fff; cursor: pointer; }
+button.ghost { background: var(--panel); color: var(--ink); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* Beat bar: tempo + streak on the sides, four beat lights in the middle */
+.beat { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--card);
+  border: 1px solid var(--panel); border-radius: 14px; padding: 10px 14px; }
+.beat .stat { font-size: .78rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; min-width: 64px; }
+.beat .stat b { display: block; font-family: var(--display); font-size: 1.2rem; color: var(--ink); letter-spacing: 0; text-transform: none;
+  font-variant-numeric: tabular-nums; }
+.beat .stat.r { text-align: right; }
+.lights { display: flex; gap: 10px; }
+.light { width: 18px; height: 18px; border-radius: 50%; background: var(--panel); transition: transform .08s ease, background .08s ease; }
+.light.on { background: var(--accent); transform: scale(1.35); }
+.light.down.on { background: var(--bad); }
+
+.board { position: relative; width: 100%; max-width: 100%; aspect-ratio: 1; background: var(--panel); border-radius: 18px;
+  padding: 3%; box-sizing: border-box; touch-action: none; user-select: none; box-shadow: 0 0 0 0 var(--accent); }
+.board.pulse { animation: pulse .22s ease-out; }
+@keyframes pulse { from { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 70%, transparent); } to { box-shadow: 0 0 0 0 transparent; } }
+.board.hit { animation: hit .25s ease-out; }
+@keyframes hit { from { box-shadow: 0 0 0 7px var(--good); } to { box-shadow: 0 0 0 0 transparent; } }
+.board.miss { animation: miss .3s ease-out; }
+@keyframes miss { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.grid, .tiles { position: absolute; inset: 3%; }
+.cellbg, .tile { position: absolute; width: 22.75%; height: 22.75%; border-radius: 12px; }
+.cellbg { background: var(--cell); }
+.tile { transition: left .09s ease, top .09s ease; z-index: 1; }
+.face { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,.12); }
+.face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.face .lv { font-family: var(--display); font-weight: 700; font-size: clamp(1.1rem, 6vw, 1.9rem); line-height: 1; }
+.face .nm { font-size: clamp(.55rem, 2.4vw, .75rem); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; opacity: .85; margin-top: 3px; }
+.face .tag { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); color: #fff;
+  font-size: clamp(.5rem, 2.2vw, .7rem); font-weight: 700; padding: 2px 0; }
+.face.junk { background: repeating-linear-gradient(45deg, #9b9187 0 8px, #8a8077 8px 16px); color: #fff; }
+.tile.new .face { animation: pop .18s ease; }
+.tile.merged .face { animation: bump .2s ease; }
+.tile.gone .face { animation: fade .2s ease forwards; }
+@keyframes pop { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes bump { 50% { transform: scale(1.14); } }
+@keyframes fade { to { transform: scale(.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .tile { transition: none; } .tile .face, .board { animation: none !important; } .light { transition: none; } }
+
+.callout { position: absolute; left: 0; right: 0; top: 42%; text-align: center; z-index: 4; pointer-events: none;
+  font-family: var(--display); font-weight: 700; font-size: 1.7rem; opacity: 0; text-shadow: 0 2px 0 var(--bg); }
+.callout.show { animation: call .55s ease-out; }
+.callout.good { color: var(--good); } .callout.bad { color: var(--bad); }
+@keyframes call { 0% { opacity: 0; transform: scale(.7); } 20% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: translateY(-18px); } }
+
+.overlay { position: absolute; inset: 0; border-radius: 18px; background: color-mix(in srgb, var(--bg) 82%, transparent);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 5; text-align: center; padding: 16px; }
+.overlay h2 { font-family: var(--display); font-size: 2rem; margin: 0; }
+.overlay p { margin: 0; color: var(--muted); max-width: 300px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.back { color: var(--muted); font-weight: 700; text-decoration: none; font-size: .9rem; align-self: flex-start; }
+.back:hover { color: var(--accent); }
+.help { color: var(--muted); font-size: .85rem; text-align: center; margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="back" href="../../index.html">&larr; All games</a>
+  <header>
+    <h1>On<span>Beat</span></h1>
+    <div class="scores">
+      <div class="chip"><small>Score</small><b id="score">0</b></div>
+      <div class="chip"><small>Best</small><b id="best">0</b></div>
+    </div>
+  </header>
+  <div class="bar">
+    <p>Move only on the beat. Off-beat moves drop junk. The tempo climbs as you score.</p>
+    <div class="btns"><button class="ghost" id="sound" aria-pressed="true">Sound on</button><button id="newgame">New game</button></div>
+  </div>
+  <div class="beat" aria-hidden="true">
+    <div class="stat">Tempo<b id="bpm">80</b></div>
+    <div class="lights" id="lights"><div class="light down"></div><div class="light"></div><div class="light"></div><div class="light"></div></div>
+    <div class="stat r">Streak<b id="streak">0</b></div>
+  </div>
+  <div class="board" id="board">
+    <div class="grid" id="grid"></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="callout" id="callout" aria-live="polite"></div>
+    <div class="overlay" id="overlay" hidden>
+      <h2 id="ovtitle">On Beat</h2>
+      <p id="ovtext">Wait for the light, then swipe. Miss the beat and a junk tile lands on the board.</p>
+      <div class="row"><button id="ovgo">Start</button><button class="ghost" id="ovkeep" hidden>Keep going</button></div>
+    </div>
+  </div>
+  <p class="help">Arrow keys or WASD on a keyboard. Swipe on a phone. Junk tiles clear after a few on-beat moves. Space pauses.</p>
+</div>
+
+<script>
+// ---- Tile config: one entry per level, same ladder as Eddy Merge. Photos load from /photos/eddy-<level>.jpg (or .png/.webp). ----
+const LEVELS = [
+  { name: "Eddy Lv 1",  bg: "#fbf4ea", fg: "#6b5641", img: "" },
+  { name: "Eddy Lv 2",  bg: "#ecd9b8", fg: "#6b5641", img: "" },
+  { name: "Eddy Lv 3",  bg: "#f2b179", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 4",  bg: "#ef9a5e", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 5",  bg: "#e9784d", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 6",  bg: "#df5c3c", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 7",  bg: "#e8c766", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 8",  bg: "#e3bb4c", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 9",  bg: "#d9ac36", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 10", bg: "#cf9d22", fg: "#fff",    img: "" },
+  { name: "Eddy Li (MIT)", bg: "#a31f34", fg: "#fff", img: "", final: true },
+];
+const N = 4, STORE = "on-beat-v1";
+const JUNK_LIFE = 6;               // on-beat moves until a junk tile clears
+const MIN_BPM = 80, MAX_BPM = 168;
+const bpmFor = s => Math.min(MAX_BPM, Math.round(MIN_BPM + Math.sqrt(s) * 1.25));
+const multFor = k => k >= 16 ? 4 : k >= 8 ? 3 : k >= 4 ? 2 : 1;
+
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(STORE + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(STORE + k, JSON.stringify(v)); return true; } catch { return false; } },
+};
+let best = store.get(":best") || 0;
+let soundOn = store.get(":sound") !== false;
+
+let grid, tiles, score, nextId, won, keepGoing, over, streak;
+const $ = id => document.getElementById(id);
+const tilesEl = $("tiles"), board = $("board");
+
+function faceHTML(t) {
+  if (t.junk) return `<div class="face junk"><div class="lv">${t.ttl}</div><div class="nm">Junk</div></div>`;
+  const L = LEVELS[t.lvl - 1];
+  if (L.img) return `<div class="face" style="background:${L.bg}"><img alt="${L.name}" src="${L.img}"><div class="tag">${L.final ? L.name : "Lv " + t.lvl}</div></div>`;
+  if (L.final) return `<div class="face" style="background:${L.bg};color:${L.fg}"><div class="lv">MIT</div><div class="nm">Eddy Li</div></div>`;
+  return `<div class="face" style="background:${L.bg};color:${L.fg}"><div class="lv">${t.lvl}</div><div class="nm">Eddy</div></div>`;
+}
+const faceKey = t => t.junk ? "j" + t.ttl : String(t.lvl);
+
+function buildGridBg() {
+  const g = $("grid"); g.innerHTML = "";
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const d = document.createElement("div"); d.className = "cellbg"; place(d, r, c); g.appendChild(d);
+  }
+}
+function place(el, r, c) { el.style.left = (c * 25.75) + "%"; el.style.top = (r * 25.75) + "%"; }
+
+function empties() { const e = []; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!grid[r][c]) e.push([r, c]); return e; }
+function addRandom(tile) {
+  const e = empties(); if (!e.length) return false;
+  const [r, c] = e[Math.floor(Math.random() * e.length)];
+  grid[r][c] = tile || { id: nextId++, lvl: Math.random() < 0.9 ? 1 : 2, isNew: true };
+  return true;
+}
+
+function newGame() {
+  grid = Array.from({ length: N }, () => Array(N).fill(null));
+  score = 0; nextId = 1; won = false; keepGoing = false; over = false; streak = 0;
+  tilesEl.innerHTML = ""; tiles = new Map();
+  addRandom(); addRandom(); render(); save();
+  showOverlay("start");
+}
+
+function render() {
+  const seen = new Set();
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const t = grid[r][c]; if (!t) continue; seen.add(t.id);
+    let el = tiles.get(t.id);
+    if (!el) { el = document.createElement("div"); el.className = "tile"; tilesEl.appendChild(el); tiles.set(t.id, el); }
+    if (el.dataset.key !== faceKey(t)) { el.innerHTML = faceHTML(t); el.dataset.key = faceKey(t); }
+    el.classList.remove("new", "merged"); void el.offsetWidth;
+    if (t.isNew) el.classList.add("new");
+    if (t.merged) el.classList.add("merged");
+    place(el, r, c); t.isNew = t.merged = false;
+  }
+  for (const [id, el] of tiles) if (!seen.has(id)) {
+    if (el._target) place(el, el._target[0], el._target[1]); else el.classList.add("gone");
+    el.style.zIndex = 0; tiles.delete(id); setTimeout(() => el.remove(), 200);
+  }
+  $("score").textContent = score;
+  if (score > best) { best = score; store.set(":best", best); }
+  $("best").textContent = best;
+  $("streak").textContent = streak + (multFor(streak) > 1 ? " ×" + multFor(streak) : "");
+  $("bpm").textContent = bpmFor(score);
+  if (won && !keepGoing) showOverlay("won");
+  else if (over) showOverlay("over");
+}
+
+// Returns true if anything moved. Junk tiles slide but never merge.
+function slide(dir) { // 0 up, 1 right, 2 down, 3 left
+  const vec = [[-1, 0], [0, 1], [1, 0], [0, -1]][dir];
+  const rows = [...Array(N).keys()], cols = [...Array(N).keys()];
+  if (vec[0] === 1) rows.reverse(); if (vec[1] === 1) cols.reverse();
+  let moved = false; const mergedAt = new Set(), mult = multFor(streak);
+  for (const r of rows) for (const c of cols) {
+    const t = grid[r][c]; if (!t) continue;
+    let nr = r, nc = c;
+    while (true) {
+      const tr = nr + vec[0], tc = nc + vec[1];
+      if (tr < 0 || tr >= N || tc < 0 || tc >= N) break;
+      const o = grid[tr][tc];
+      if (!o) { nr = tr; nc = tc; continue; }
+      if (!t.junk && !o.junk && o.lvl === t.lvl && o.lvl < LEVELS.length && !mergedAt.has(tr * N + tc)) {
+        const el = tiles.get(t.id); if (el) el._target = [tr, tc];
+        grid[r][c] = null;
+        grid[tr][tc] = { id: nextId++, lvl: o.lvl + 1, merged: true };
+        const oel = tiles.get(o.id); if (oel) { tiles.delete(o.id); tiles.set(grid[tr][tc].id, oel); }
+        mergedAt.add(tr * N + tc);
+        score += 2 ** (o.lvl + 1) * mult;
+        if (o.lvl + 1 === LEVELS.length) won = true;
+        moved = true; nr = null; break;
+      }
+      break;
+    }
+    if (nr !== null && (nr !== r || nc !== c)) { grid[nr][nc] = t; grid[r][c] = null; moved = true; }
+  }
+  return moved;
+}
+function tickJunk() {
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const t = grid[r][c];
+    if (t && t.junk && --t.ttl <= 0) grid[r][c] = null;
+  }
+}
+function canMove() {
+  if (empties().length) return true;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const t = grid[r][c]; if (t.junk) continue;
+    const l = t.lvl, right = c + 1 < N && grid[r][c + 1], down = r + 1 < N && grid[r + 1][c];
+    if (l < LEVELS.length && ((right && !right.junk && right.lvl === l) || (down && !down.junk && down.lvl === l))) return true;
+  }
+  return false;
+}
+
+// ---- the beat ----
+// Beats are tracked on performance.now(). A move is on beat if it lands within the window
+// around the nearest beat, and only one move counts per beat.
+let running = false, lastBeat = 0, nextBeat = 0, beatNo = 0, usedBeat = -1, raf = 0;
+const interval = () => 60000 / bpmFor(score);
+const windowMs = () => Math.max(90, interval() * 0.24);
+
+function startBeat() {
+  hideOverlay(); unlockAudio();
+  running = true; beatNo = 0; usedBeat = -1;
+  nextBeat = performance.now() + 600; lastBeat = nextBeat - interval();
+  cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+}
+function stopBeat() { running = false; cancelAnimationFrame(raf); setLight(-1); }
+function loop(now) {
+  if (!running) return;
+  if (now >= nextBeat) {
+    lastBeat = nextBeat; beatNo++; nextBeat = lastBeat + interval();
+    onBeat();
+  }
+  raf = requestAnimationFrame(loop);
+}
+const lights = [...document.querySelectorAll(".light")];
+function setLight(i) { lights.forEach((l, j) => l.classList.toggle("on", j === i)); }
+function onBeat() {
+  const i = (beatNo - 1) % 4;
+  setLight(i); setTimeout(() => { if (running) setLight(-1); }, Math.min(140, interval() / 2));
+  flash("pulse"); click(i === 0);
+}
+// Which beat is this press closest to, and is it close enough?
+function judge(now) {
+  const dLast = now - lastBeat, dNext = nextBeat - now;
+  const near = dLast <= dNext ? beatNo : beatNo + 1, d = Math.min(dLast, dNext);
+  return { near, ok: d <= windowMs() && near !== usedBeat };
+}
+
+function move(dir) {
+  if (!running) { if (!over && !(won && !keepGoing)) startBeat(); return; }
+  const { near, ok } = judge(performance.now());
+  if (ok) {
+    usedBeat = near;
+    if (!slide(dir)) return;             // a wall bump on the beat costs nothing
+    streak++; tickJunk(); addRandom();
+    callout(multFor(streak) > 1 ? "On beat ×" + multFor(streak) : "On beat", "good"); flash("hit");
+  } else {
+    streak = 0;
+    addRandom({ id: nextId++, junk: true, ttl: JUNK_LIFE, isNew: true });
+    callout("Off beat!", "bad"); flash("miss"); buzz();
+  }
+  if (!canMove()) { over = true; stopBeat(); }
+  render(); save();
+}
+
+// ---- feedback ----
+function flash(cls) { board.classList.remove("pulse", "hit", "miss"); void board.offsetWidth; board.classList.add(cls); }
+function callout(text, kind) {
+  const el = $("callout"); el.textContent = text; el.className = "callout " + kind;
+  void el.offsetWidth; el.classList.add("show");
+}
+let actx = null;
+function unlockAudio() {
+  if (!soundOn) return;
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch { actx = null; }
+}
+function tone(freq, dur, type, vol) {
+  if (!soundOn || !actx) return;
+  const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur);
+}
+const click = down => tone(down ? 1320 : 880, 0.05, "square", 0.08);
+const buzz = () => tone(110, 0.18, "sawtooth", 0.12);
+function setSound(on) {
+  soundOn = on; store.set(":sound", on);
+  $("sound").textContent = on ? "Sound on" : "Sound off"; $("sound").setAttribute("aria-pressed", on);
+  if (on && running) unlockAudio();
+}
+
+// ---- overlay ----
+function showOverlay(kind) {
+  const ov = $("overlay"); ov.hidden = false; $("ovkeep").hidden = true;
+  if (kind === "won") {
+    $("ovtitle").textContent = "You made Eddy Li (MIT)!"; $("ovtext").textContent = "Right on the beat. Keep going if you can hold the tempo.";
+    $("ovgo").textContent = "New game"; $("ovgo").onclick = newGame; $("ovkeep").hidden = false; stopBeat();
+  } else if (over) {
+    $("ovtitle").textContent = "Lost the beat"; $("ovtext").textContent = "The board is full. Score " + score + ".";
+    $("ovgo").textContent = "Try again"; $("ovgo").onclick = () => { newGame(); };
+  } else if (kind === "pause") {
+    $("ovtitle").textContent = "Paused"; $("ovtext").textContent = "The beat restarts with a short count-in.";
+    $("ovgo").textContent = "Resume"; $("ovgo").onclick = startBeat;
+  } else {
+    $("ovtitle").textContent = "On Beat"; $("ovtext").textContent = "Wait for the light, then swipe. Miss the beat and a junk tile lands on the board.";
+    $("ovgo").textContent = "Start"; $("ovgo").onclick = startBeat;
+  }
+}
+function hideOverlay() { $("overlay").hidden = true; }
+function pause() { if (running) { stopBeat(); showOverlay("pause"); } }
+
+function save() {
+  store.set(":game", { grid: grid.map(row => row.map(t => !t ? 0 : t.junk ? -t.ttl : t.lvl)), score, won, keepGoing, over, streak });
+}
+function load() {
+  const s = store.get(":game");
+  if (!s || !Array.isArray(s.grid)) return false;
+  nextId = 1;
+  grid = s.grid.map(row => row.map(v => !v ? null : v < 0 ? { id: nextId++, junk: true, ttl: -v } : { id: nextId++, lvl: v }));
+  score = s.score || 0; won = !!s.won; keepGoing = !!s.keepGoing; over = !!s.over; streak = s.streak || 0;
+  tilesEl.innerHTML = ""; tiles = new Map(); render();
+  if (!over && !(won && !keepGoing)) showOverlay("pause");
+  return true;
+}
+
+// ---- input ----
+const KEYS = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3, w: 0, d: 1, s: 2, a: 3, W: 0, D: 1, S: 2, A: 3 };
+document.addEventListener("keydown", e => {
+  if (e.repeat) return;
+  if (e.key in KEYS) { e.preventDefault(); move(KEYS[e.key]); }
+  else if (e.key === " " && !e.target.closest("button")) { e.preventDefault(); running ? pause() : (!$("overlay").hidden && $("ovgo").click()); }
+});
+let sx = 0, sy = 0, tracking = false;
+board.addEventListener("pointerdown", e => { if (e.target.closest("button")) return; sx = e.clientX; sy = e.clientY; tracking = true; });
+board.addEventListener("pointerup", e => {
+  if (!tracking) return; tracking = false;
+  const dx = e.clientX - sx, dy = e.clientY - sy;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+  move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
+});
+board.addEventListener("pointercancel", () => tracking = false);
+document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); });
+
+$("newgame").onclick = newGame;
+$("ovkeep").onclick = () => { keepGoing = true; startBeat(); render(); save(); };
+$("sound").onclick = () => setSound(!soundOn);
+
+// ---- photos folder: try photos/eddy-N.{jpg,png,webp} for each level without an img ----
+function refreshFaces() { for (const el of tiles.values()) delete el.dataset.key; render(); }
+function loadFolderPhotos() {
+  LEVELS.forEach((L, i) => {
+    if (L.img) return;
+    const exts = ["jpg", "png", "webp"];
+    const tryNext = () => {
+      if (!exts.length) return;
+      const src = `../../photos/eddy-${i + 1}.${exts.shift()}`, probe = new Image();
+      probe.onload = () => { L.img = src; refreshFaces(); };
+      probe.onerror = tryNext;
+      probe.src = src;
+    };
+    tryNext();
+  });
+}
+
+buildGridBg(); setSound(soundOn);
+if (!load()) newGame();
+loadFolderPhotos();
+</script>
+</body>
+</html>
