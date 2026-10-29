@@ -41,6 +41,8 @@ const LIST = [
     rule: "Every Eddy wears a word. Type it to fire that Eddy at its match before the board fills." },
   { slug: "face-steer", name: "Face Steer",
     rule: "Your webcam watches your head. Tilt or nod to slide the tiles." },
+  { slug: "card-hand", name: "Card Hand",
+    rule: "Every move is a card from your hand. Build a deck of tricks as you go." },
 ];
 
 export const GAMES = LIST.map(g => ({ ...g, load: components[`./${g.slug}/Game.svelte`] ?? null }));
