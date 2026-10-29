@@ -23,6 +23,8 @@ const LIST = [
     rule: "Mix colors instead of numbers. Opposite colors cancel out." },
   { slug: "on-beat", name: "On Beat",
     rule: "Moves only count on the beat, and the tempo keeps climbing." },
+  { slug: "whack-an-eddy", name: "Whack-an-Eddy",
+    rule: "Eddys pop out of holes. Whack two matching ones within a second to merge them." },
 ];
 
 export const GAMES = LIST.map(g => ({ ...g, load: components[`./${g.slug}/Game.svelte`] ?? null }));
