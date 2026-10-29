@@ -6,7 +6,7 @@ export const W = 300, H = 400, DANGER_Y = 64, MAX_TILT = 0.7;
 const GRAV = 1500, DAMP = 0.9985, BOUNCE = 0.25, ITERS = 3;
 
 let nextId = 1;
-export const radius = lvl => 15 + lvl * 4.4;
+export const radius = lvl => 17 + lvl * 4.8;
 
 export function makeBall(x, y, lvl) {
   return { id: nextId++, x, y, vx: 0, vy: 0, lvl, r: radius(lvl), age: 0, pop: 0 };
