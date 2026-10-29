@@ -25,6 +25,8 @@ const LIST = [
     rule: "Moves only count on the beat, and the tempo keeps climbing." },
   { slug: "sneeze", name: "Sneeze",
     rule: "Hold to build a sneeze, then let go to blast every tile across the board." },
+  { slug: "whack-an-eddy", name: "Whack-an-Eddy",
+    rule: "Eddys pop out of holes. Whack two matching ones within a second to merge them." },
 ];
 
 export const GAMES = LIST.map(g => ({ ...g, load: components[`./${g.slug}/Game.svelte`] ?? null }));
