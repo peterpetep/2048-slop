@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eddy Merge</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@400;700&display=swap">
+<style>
+/* Layout: one centered column; header with title + score chips, board, then a "faces" drawer for photo slots */
+:root {
+  --bg: #f6efe4;
+  --panel: #e7d8c3;
+  --cell: #efe3d2;
+  --ink: #5a4634;
+  --muted: #8f7a63;
+  --accent: #d9822b;
+  --card: #fffaf2;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #241c15; --panel: #3a2e24; --cell: #4a3b2e; --ink: #f1e4d2; --muted: #b9a58d; --accent: #f0a14c; --card: #2f251c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #241c15; --panel: #3a2e24; --cell: #4a3b2e; --ink: #f1e4d2; --muted: #b9a58d; --accent: #f0a14c; --card: #2f251c; color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px; }
+.wrap { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--display); font-weight: 700; font-size: 2.2rem; margin: 0; line-height: 1; letter-spacing: -0.01em; }
+h1 span { color: var(--accent); }
+.scores { display: flex; gap: 8px; }
+.chip { background: var(--panel); border-radius: 10px; padding: 6px 14px; text-align: center; min-width: 70px; }
+.chip small { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.chip b { font-family: var(--display); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.bar p { margin: 0; color: var(--muted); font-size: .92rem; }
+button { font-family: var(--display); font-weight: 500; font-size: .95rem; border: 0; border-radius: 999px;
+  padding: 8px 16px; background: var(--accent); color: #fff; cursor: pointer; }
+button.ghost { background: var(--panel); color: var(--ink); }
+button:focus-visible, label.slot:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.board { position: relative; width: 100%; max-width: 100%; aspect-ratio: 1; background: var(--panel); border-radius: 18px;
+  padding: 3%; box-sizing: border-box; touch-action: none; user-select: none; }
+.grid, .tiles { position: absolute; inset: 3%; }
+.cellbg, .tile { position: absolute; width: 22.75%; height: 22.75%; border-radius: 12px; }
+.cellbg { background: var(--cell); }
+.tile { transition: left .11s ease, top .11s ease; z-index: 1; }
+.face { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,.12); }
+.face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.face .lv { font-family: var(--display); font-weight: 700; font-size: clamp(1.1rem, 6vw, 1.9rem); line-height: 1; }
+.face .nm { font-size: clamp(.55rem, 2.4vw, .75rem); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; opacity: .85; margin-top: 3px; }
+.face .tag { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); color: #fff;
+  font-size: clamp(.5rem, 2.2vw, .7rem); font-weight: 700; padding: 2px 0; }
+.tile.new .face { animation: pop .18s ease; }
+.tile.merged .face { animation: bump .2s ease; }
+@keyframes pop { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes bump { 50% { transform: scale(1.14); } }
+@media (prefers-reduced-motion: reduce) { .tile { transition: none; } .tile .face { animation: none !important; } }
+
+.overlay { position: absolute; inset: 0; border-radius: 18px; background: color-mix(in srgb, var(--bg) 82%, transparent);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 5; text-align: center; padding: 16px; }
+.overlay h2 { font-family: var(--display); font-size: 2rem; margin: 0; }
+
+.faces { background: var(--card); border: 1px solid var(--panel); border-radius: 14px; padding: 14px; }
+.faces summary { font-family: var(--display); font-size: 1.05rem; cursor: pointer; }
+.faces p { color: var(--muted); margin: 8px 0 12px; font-size: .88rem; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+label.slot { position: relative; aspect-ratio: 1; cursor: pointer; border-radius: 12px; }
+label.slot input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+label.slot .face .lv { font-size: 1.1rem; }
+label.slot .face .nm { font-size: .55rem; }
+.slotrow { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.help { color: var(--muted); font-size: .85rem; text-align: center; margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Eddy<span>Merge</span></h1>
+    <div class="scores">
+      <div class="chip"><small>Score</small><b id="score">0</b></div>
+      <div class="chip"><small>Best</small><b id="best">0</b></div>
+    </div>
+  </header>
+  <div class="bar">
+    <p>Merge two matching Eddys to level up. Reach <strong>Eddy Li (MIT)</strong>.</p>
+    <button id="newgame">New game</button>
+  </div>
+  <div class="board" id="board">
+    <div class="grid" id="grid"></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="overlay" id="overlay" hidden>
+      <h2 id="ovtitle">Game over</h2>
+      <div class="slotrow"><button id="ovagain">Try again</button><button class="ghost" id="ovkeep" hidden>Keep going</button></div>
+    </div>
+  </div>
+  <p class="help">Arrow keys or WASD on a keyboard. Swipe on a phone.</p>
+
+  <details class="faces" id="faces">
+    <summary>Eddy photos</summary>
+    <p>Tap a level to give it a photo of Eddy. Photos stay in this browser only. Level 11 is the final tile.</p>
+    <div class="slots" id="slots"></div>
+    <div class="slotrow"><button class="ghost" id="clearphotos">Clear my photos</button></div>
+  </details>
+</div>
+
+<script>
+// ---- Tile config: one entry per level. Put an image URL or data: URI in `img` to bake a photo in. ----
+const LEVELS = [
+  { name: "Eddy Lv 1",  bg: "#f3e6d3", fg: "#6b5641", img: "" },
+  { name: "Eddy Lv 2",  bg: "#ecd9b8", fg: "#6b5641", img: "" },
+  { name: "Eddy Lv 3",  bg: "#f2b179", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 4",  bg: "#ef9a5e", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 5",  bg: "#e9784d", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 6",  bg: "#df5c3c", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 7",  bg: "#e8c766", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 8",  bg: "#e3bb4c", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 9",  bg: "#d9ac36", fg: "#fff",    img: "" },
+  { name: "Eddy Lv 10", bg: "#cf9d22", fg: "#fff",    img: "" },
+  { name: "Eddy Li (MIT)", bg: "#a31f34", fg: "#fff", img: "", final: true },
+];
+const N = 4, STORE = "eddy-merge-v1";
+
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(STORE + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(STORE + k, JSON.stringify(v)); return true; } catch { return false; } },
+};
+let photos = store.get(":photos") || {};
+let best = store.get(":best") || 0;
+
+let grid, tiles, score, nextId, won, keepGoing, over;
+const $ = id => document.getElementById(id);
+const tilesEl = $("tiles");
+
+function faceHTML(lvl) {
+  const L = LEVELS[lvl - 1], src = photos[lvl] || L.img;
+  if (src) return `<div class="face" style="background:${L.bg}"><img alt="${L.name}" src="${src}"><div class="tag">${L.final ? L.name : "Lv " + lvl}</div></div>`;
+  if (L.final) return `<div class="face" style="background:${L.bg};color:${L.fg}"><div class="lv">MIT</div><div class="nm">Eddy Li</div></div>`;
+  return `<div class="face" style="background:${L.bg};color:${L.fg}"><div class="lv">${lvl}</div><div class="nm">Eddy</div></div>`;
+}
+
+function buildGridBg() {
+  const g = $("grid"); g.innerHTML = "";
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const d = document.createElement("div"); d.className = "cellbg"; place(d, r, c); g.appendChild(d);
+  }
+}
+function place(el, r, c) { el.style.left = (c * 25.75) + "%"; el.style.top = (r * 25.75) + "%"; }
+
+function empties() { const e = []; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!grid[r][c]) e.push([r, c]); return e; }
+function addRandom() {
+  const e = empties(); if (!e.length) return;
+  const [r, c] = e[Math.floor(Math.random() * e.length)];
+  grid[r][c] = { id: nextId++, lvl: Math.random() < 0.9 ? 1 : 2, isNew: true };
+}
+
+function newGame() {
+  grid = Array.from({ length: N }, () => Array(N).fill(null));
+  score = 0; nextId = 1; won = false; keepGoing = false; over = false;
+  tilesEl.innerHTML = ""; tiles = new Map();
+  addRandom(); addRandom(); render(); save();
+}
+
+function render() {
+  const seen = new Set();
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const t = grid[r][c]; if (!t) continue; seen.add(t.id);
+    let el = tiles.get(t.id);
+    if (!el) { el = document.createElement("div"); el.className = "tile"; tilesEl.appendChild(el); tiles.set(t.id, el); }
+    if (el.dataset.lvl != t.lvl) { el.innerHTML = faceHTML(t.lvl); el.dataset.lvl = t.lvl; }
+    el.classList.remove("new", "merged"); void el.offsetWidth;
+    if (t.isNew) el.classList.add("new");
+    if (t.merged) el.classList.add("merged");
+    place(el, r, c); t.isNew = t.merged = false;
+  }
+  for (const [id, el] of tiles) if (!seen.has(id)) {
+    if (el._target) place(el, el._target[0], el._target[1]);
+    el.style.zIndex = 0; tiles.delete(id); setTimeout(() => el.remove(), 120);
+  }
+  $("score").textContent = score;
+  if (score > best) { best = score; store.set(":best", best); }
+  $("best").textContent = best;
+  const ov = $("overlay");
+  if (won && !keepGoing) { ov.hidden = false; $("ovtitle").textContent = "You made Eddy Li (MIT)!"; $("ovkeep").hidden = false; }
+  else if (over) { ov.hidden = false; $("ovtitle").textContent = "No moves left"; $("ovkeep").hidden = true; }
+  else ov.hidden = true;
+}
+
+function move(dir) { // 0 up, 1 right, 2 down, 3 left
+  if (over || (won && !keepGoing)) return;
+  const vec = [[-1, 0], [0, 1], [1, 0], [0, -1]][dir];
+  const rows = [...Array(N).keys()], cols = [...Array(N).keys()];
+  if (vec[0] === 1) rows.reverse(); if (vec[1] === 1) cols.reverse();
+  let moved = false; const mergedAt = new Set();
+  for (const r of rows) for (const c of cols) {
+    const t = grid[r][c]; if (!t) continue;
+    let nr = r, nc = c;
+    while (true) {
+      const tr = nr + vec[0], tc = nc + vec[1];
+      if (tr < 0 || tr >= N || tc < 0 || tc >= N) break;
+      const o = grid[tr][tc];
+      if (!o) { nr = tr; nc = tc; continue; }
+      if (o.lvl === t.lvl && o.lvl < LEVELS.length && !mergedAt.has(tr * N + tc)) {
+        const el = tiles.get(t.id); if (el) el._target = [tr, tc];
+        grid[r][c] = null;
+        grid[tr][tc] = { id: nextId++, lvl: o.lvl + 1, merged: true };
+        const oel = tiles.get(o.id); if (oel) { tiles.delete(o.id); tiles.set(grid[tr][tc].id, oel); }
+        mergedAt.add(tr * N + tc);
+        score += 2 ** (o.lvl + 1);
+        if (o.lvl + 1 === LEVELS.length) won = true;
+        moved = true; nr = null; break;
+      }
+      break;
+    }
+    if (nr !== null && (nr !== r || nc !== c)) { grid[nr][nc] = t; grid[r][c] = null; moved = true; }
+  }
+  if (!moved) return;
+  addRandom();
+  if (!canMove()) over = true;
+  render(); save();
+}
+function canMove() {
+  if (empties().length) return true;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const l = grid[r][c].lvl;
+    if (l < LEVELS.length && ((c + 1 < N && grid[r][c + 1].lvl === l) || (r + 1 < N && grid[r + 1][c].lvl === l))) return true;
+  }
+  return false;
+}
+
+function save() { store.set(":game", { grid: grid.map(row => row.map(t => t ? t.lvl : 0)), score, won, keepGoing, over }); }
+function load() {
+  const s = store.get(":game");
+  if (!s || !Array.isArray(s.grid)) return false;
+  grid = s.grid.map(row => row.map(l => l ? { id: 0, lvl: l } : null));
+  nextId = 1; grid.forEach(row => row.forEach(t => { if (t) t.id = nextId++; }));
+  score = s.score || 0; won = !!s.won; keepGoing = !!s.keepGoing; over = !!s.over;
+  tilesEl.innerHTML = ""; tiles = new Map(); render(); return true;
+}
+
+// ---- input ----
+const KEYS = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3, w: 0, d: 1, s: 2, a: 3, W: 0, D: 1, S: 2, A: 3 };
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input")) return;
+  if (e.key in KEYS) { e.preventDefault(); move(KEYS[e.key]); }
+});
+let sx = 0, sy = 0, tracking = false;
+const board = $("board");
+board.addEventListener("pointerdown", e => { sx = e.clientX; sy = e.clientY; tracking = true; });
+board.addEventListener("pointerup", e => {
+  if (!tracking) return; tracking = false;
+  const dx = e.clientX - sx, dy = e.clientY - sy;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+  move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
+});
+board.addEventListener("pointercancel", () => tracking = false);
+
+$("newgame").onclick = newGame;
+$("ovagain").onclick = newGame;
+$("ovkeep").onclick = () => { keepGoing = true; render(); save(); };
+
+// ---- photo slots ----
+function buildSlots() {
+  const s = $("slots"); s.innerHTML = "";
+  LEVELS.forEach((L, i) => {
+    const lvl = i + 1, lab = document.createElement("label");
+    lab.className = "slot"; lab.title = "Set photo for " + L.name;
+    lab.innerHTML = faceHTML(lvl) + `<input type="file" accept="image/*" id="photo-${lvl}">`;
+    lab.querySelector("input").onchange = e => { const f = e.target.files[0]; if (f) setPhoto(lvl, f); };
+    s.appendChild(lab);
+  });
+}
+function setPhoto(lvl, file) {
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    const S = 240, cv = document.createElement("canvas"); cv.width = cv.height = S;
+    const m = Math.min(img.width, img.height);
+    cv.getContext("2d").drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, S, S);
+    photos[lvl] = cv.toDataURL("image/jpeg", 0.85);
+    URL.revokeObjectURL(url);
+    store.set(":photos", photos); refreshFaces();
+  };
+  img.src = url;
+}
+function refreshFaces() { buildSlots(); for (const el of tiles.values()) el.innerHTML = faceHTML(+el.dataset.lvl); }
+$("clearphotos").onclick = () => { photos = {}; store.set(":photos", photos); refreshFaces(); };
+
+buildGridBg(); buildSlots();
+if (!load()) newGame();
+</script>
+</body>
+</html>
