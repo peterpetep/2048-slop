@@ -31,6 +31,8 @@ const LIST = [
     rule: "No sliding. Eddys are magnets that pull each other together. Flip poles to steer." },
   { slug: "slingshot", name: "Slingshot",
     rule: "Pull back and fling Eddys at a pile. Matches merge where they land." },
+  { slug: "lasso", name: "Lasso",
+    rule: "No sliding. Draw a loop around matching Eddys to merge them. A sloppy loop wastes the move." },
 ];
 
 export const GAMES = LIST.map(g => ({ ...g, load: components[`./${g.slug}/Game.svelte`] ?? null }));
