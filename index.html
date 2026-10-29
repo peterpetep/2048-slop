@@ -109,9 +109,10 @@ label.slot .face .nm { font-size: .55rem; }
 </div>
 
 <script>
-// ---- Tile config: one entry per level. Put an image URL or data: URI in `img` to bake a photo in. ----
+// ---- Tile config: one entry per level. Photos load from photos/eddy-<level>.jpg (or .png/.webp);
+// set `img` to override with any URL. Levels without a photo show the colored placeholder. ----
 const LEVELS = [
-  { name: "Eddy Lv 1",  bg: "#f3e6d3", fg: "#6b5641", img: "" },
+  { name: "Eddy Lv 1",  bg: "#fbf4ea", fg: "#6b5641", img: "" },
   { name: "Eddy Lv 2",  bg: "#ecd9b8", fg: "#6b5641", img: "" },
   { name: "Eddy Lv 3",  bg: "#f2b179", fg: "#fff",    img: "" },
   { name: "Eddy Lv 4",  bg: "#ef9a5e", fg: "#fff",    img: "" },
@@ -289,8 +290,25 @@ function setPhoto(lvl, file) {
 function refreshFaces() { buildSlots(); for (const el of tiles.values()) el.innerHTML = faceHTML(+el.dataset.lvl); }
 $("clearphotos").onclick = () => { photos = {}; store.set(":photos", photos); refreshFaces(); };
 
+// ---- photos folder: try photos/eddy-N.{jpg,png,webp} for each level without an img ----
+function loadFolderPhotos() {
+  LEVELS.forEach((L, i) => {
+    if (L.img) return;
+    const exts = ["jpg", "png", "webp"];
+    const tryNext = () => {
+      if (!exts.length) return;
+      const src = `photos/eddy-${i + 1}.${exts.shift()}`, probe = new Image();
+      probe.onload = () => { L.img = src; refreshFaces(); };
+      probe.onerror = tryNext;
+      probe.src = src;
+    };
+    tryNext();
+  });
+}
+
 buildGridBg(); buildSlots();
 if (!load()) newGame();
+loadFolderPhotos();
 </script>
 </body>
 </html>

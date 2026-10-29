@@ -6,6 +6,8 @@ Open `index.html` in a browser to play. No build step.
 
 ## Adding photos
 
-Each level is an entry in the `LEVELS` array at the top of the script in `index.html`. Put a photo in `photos/` and set that level's `img`, for example `img: "photos/eddy-1.jpg"`. Levels without a photo show a colored placeholder.
+Drop photos into the `photos/` folder, named by level: `eddy-1.jpg` for the first tile up to `eddy-11.jpg` for the final Eddy Li (MIT) tile. `.png` and `.webp` also work. The game picks them up on load, and any level without a photo shows a colored placeholder. See [`photos/README.md`](photos/README.md).
 
-Players can also set photos in the "Eddy photos" panel under the board. Those stay in their own browser.
+Photos load over HTTP, so serve the folder (for example `python3 -m http.server`) or host it on GitHub Pages. Some browsers block them when `index.html` is opened straight from disk.
+
+Players can also pick their own photos in the "Eddy photos" panel under the board. Those stay in their browser only.
