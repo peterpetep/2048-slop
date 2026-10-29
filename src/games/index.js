@@ -31,6 +31,8 @@ const LIST = [
     rule: "No sliding. Eddys are magnets that pull each other together. Flip poles to steer." },
   { slug: "slingshot", name: "Slingshot",
     rule: "Pull back and fling Eddys at a pile. Matches merge where they land." },
+  { slug: "card-hand", name: "Card Hand",
+    rule: "Every move is a card from your hand. Build a deck of tricks as you go." },
 ];
 
 export const GAMES = LIST.map(g => ({ ...g, load: components[`./${g.slug}/Game.svelte`] ?? null }));
