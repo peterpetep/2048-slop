@@ -43,6 +43,8 @@ const LIST = [
     rule: "Your webcam watches your head. Tilt or nod to slide the tiles." },
   { slug: "card-hand", name: "Card Hand",
     rule: "Every move is a card from your hand. Build a deck of tricks as you go." },
+  { slug: "point-shoot", name: "Point & Shoot",
+    rule: "Point your camera at someone. New tiles are pieces of the picture, and merges zoom out until 2048 is the whole shot." },
 ];
 
 export const GAMES = LIST.map(g => ({ ...g, load: components[`./${g.slug}/Game.svelte`] ?? null }));
